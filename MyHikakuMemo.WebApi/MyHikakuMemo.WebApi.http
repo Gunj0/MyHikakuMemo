@@ -1,6 +1,27 @@
 @HostAddress = http://localhost:5292
 
-GET {{HostAddress}}/memo
-Accept: application/json
+### ユーザー登録
 
-###
+POST {{HostAddress}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example1.com",
+  "password": "Password123!"
+}
+
+### ログイン
+
+POST {{HostAddress}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+### メモ一覧取得
+
+GET {{HostAddress}}/memo
+Content-Type: application/json
+Authorization: Bearer {上記で取得したJWT}

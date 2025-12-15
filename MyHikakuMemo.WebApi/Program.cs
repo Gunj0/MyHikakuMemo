@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MyHikakuMemo.WebApi.Data;
 using MyHikakuMemo.WebApi.Data.Entities;
+using MyHikakuMemo.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +54,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// DI
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
 // コントローラ
 builder.Services.AddControllers();
 // OpenAPI自動生成 https://aka.ms/aspnet/openapi
