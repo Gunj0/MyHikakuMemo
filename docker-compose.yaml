@@ -9,19 +9,18 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=MyHikakuMemo;Username=user;Password=password
     depends_on:
-      - db # dbサービスが起動してから起動するように設定
+      - db
   db:
-    # postgres https://hub.docker.com/_/postgres
-    image: postgres:18
+    image: postgres:17
     restart: always
     container_name: postgres
     ports:
       - 5432:5432
     volumes:
-      - db-store:/var/lib/postgresql/data # ボリュームをマウント
+      - db-store:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: MyHikakuMemo # 初期データベース名
+      POSTGRES_DB: MyHikakuMemo
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
 volumes:
-  db-store: # db_storeという名前でボリュームを作成
+  db-store:
