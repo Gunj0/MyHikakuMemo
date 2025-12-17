@@ -97,4 +97,54 @@ public class AuthController(
             Message = "メールアドレスまたはパスワードが正しくありません"
         });
     }
+
+    /// <summary>
+    /// POST: /auth/externalLogin (外部ログイン)
+    /// </summary>
+    /// <param name="dto">外部ログインリクエスト</param>
+    /// <returns></returns>
+    [HttpPost("externalLogin")]
+    public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // メールアドレスでユーザー検索
+        var user = await _userManager.FindByEmailAsync(dto.Email);
+        if (user == null)
+        {
+            // ユーザーが存在しない場合、新規作成
+            user = new ApplicationUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+            };
+
+            var createResult = await _userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                return BadRequest(createResult.Errors);
+            }
+
+            // 外部ログイン情報を関連付け(動作未確認)
+            var loginInfo = new UserLoginInfo(dto.Provider, dto.ProviderKey, dto.Provider);
+            var addLoginResult = await _userManager.AddLoginAsync(user, loginInfo);
+            if (!addLoginResult.Succeeded)
+            {
+                return BadRequest(addLoginResult.Errors);
+            }
+        }
+
+        // JWTを発行
+        var (token, expiration) = _tokenService.GenerateToken(user);
+
+        return Ok(new AuthResponseDto
+        {
+            Token = token,
+            Expiration = expiration,
+            Email = user.Email!
+        });
+    }
 }
