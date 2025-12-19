@@ -103,7 +103,7 @@ public class AuthController(
     /// </summary>
     /// <param name="dto">外部ログインリクエスト</param>
     /// <returns></returns>
-    [HttpPost("externalLogin")]
+    [HttpPost("external-login")]
     public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto dto)
     {
         if (!ModelState.IsValid)

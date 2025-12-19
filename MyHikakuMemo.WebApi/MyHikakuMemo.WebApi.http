@@ -19,7 +19,7 @@ Content-Type: application/json
 }
 
 ### 外部ログイン
-POST {{HostAddress}}/auth/externalLogin
+POST {{HostAddress}}/auth/external-login
 Content-Type: application/json
 
 {
