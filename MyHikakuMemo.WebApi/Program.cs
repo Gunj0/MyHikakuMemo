@@ -58,6 +58,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 // コントローラ
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks();
 // OpenAPI自動生成 https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -85,5 +86,6 @@ app.UseAuthorization();
 
 // コントローラをマッピング
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
