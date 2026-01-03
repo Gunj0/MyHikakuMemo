@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C#: MyHikakuMemo Debug",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/MyHikakuMemo.WebApi/MyHikakuMemo.WebApi.csproj"
+    }
+  ]
+}
