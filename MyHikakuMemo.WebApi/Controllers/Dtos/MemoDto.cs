@@ -1,8 +1,15 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MyHikakuMemo.WebApi.Controllers.Dtos;
 
 public class CreateMemoDto
 {
+    [Required]
+    [MaxLength(255)]
     public required string Title { get; set; }
+
+    [Required]
+    [MaxLength(10000)]
     public required string Content { get; set; }
 }
 

@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using MyHikakuMemo.WebApi.Data;
 using MyHikakuMemo.WebApi.Services;
@@ -18,53 +17,40 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Better Auth設定
 var betterAuthUrl = builder.Configuration["BetterAuth:Url"] ?? "http://localhost:3000";
 var issuer = builder.Configuration["BetterAuth:Issuer"] ?? betterAuthUrl;
+var requireHttpsMetadata = !builder.Environment.IsDevelopment();
 
-RsaSecurityKey? securityKey = null;
-
-try
+// MemoryCache追加
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient("Jwks", client =>
 {
-    var httpClient = new HttpClient();
-    var jwksUrl = $"{betterAuthUrl}/api/auth/jwks";
-    var jwksResponse = await httpClient.GetStringAsync(jwksUrl);
-    Console.WriteLine($"JWKS読み込み成功: {jwksUrl}");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 
-    var jwks = JsonSerializer.Deserialize<JsonElement>(jwksResponse);
-    var key = jwks.GetProperty("keys")[0];
-
-    // RSA公開鍵のパラメータを取得
-    var nValue = key.GetProperty("n").GetString();
-    var eValue = key.GetProperty("e").GetString();
-
-    // RSASecurityKeyの作成
-    var rsa = RSA.Create();
-    rsa.ImportParameters(new RSAParameters
-    {
-        Modulus = Base64UrlEncoder.DecodeBytes(nValue),
-        Exponent = Base64UrlEncoder.DecodeBytes(eValue)
-    });
-
-    securityKey = new RsaSecurityKey(rsa);
-    Console.WriteLine("RSA公開鍵の作成成功");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"JWKS読み込みエラー: {ex.Message}");
-    throw;
-}
+// JWKSキーリゾルバーをサービスコンテナに登録
+var jwksUrl = $"{betterAuthUrl}/api/auth/jwks";
+builder.Services.AddSingleton(sp =>
+    new JwksKeyResolver(
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient("Jwks"),
+        jwksUrl,
+        sp.GetRequiredService<IMemoryCache>(),
+        sp.GetRequiredService<ILogger<JwksKeyResolver>>()));
 
 // JWT認証設定
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    .AddJwtBearer();
+
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<JwksKeyResolver, ILogger<Program>>((options, keyResolver, logger) =>
     {
         options.Authority = issuer;
-        // options.MetadataAddress = $"{betterAuthUrl}/.well-known/openid-configuration";
-        options.MetadataAddress = $"{betterAuthUrl}/api/auth/jwks";
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = requireHttpsMetadata;
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = securityKey,
+            // 動的に鍵を取得するリゾルバーを設定（キャッシュ付き）
+            IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+                keyResolver.ResolveSigningKeysAsync(kid).GetAwaiter().GetResult(),
             ValidateIssuer = true,
             ValidIssuer = issuer,
             ValidateAudience = false, // Better Authでは通常設定不要
@@ -76,13 +62,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnAuthenticationFailed = context =>
             {
-                Console.WriteLine($"JWT認証失敗: {context.Exception.Message}");
+                logger.LogWarning(context.Exception, "JWT認証失敗");
                 return Task.CompletedTask;
             },
             OnTokenValidated = context =>
             {
                 var userId = context.Principal?.FindFirst("sub")?.Value;
-                Console.WriteLine($"JWT認証成功 - ユーザーID: {userId}");
+                logger.LogInformation("JWT認証成功 - ユーザーID: {UserId}", userId);
                 return Task.CompletedTask;
             }
         };

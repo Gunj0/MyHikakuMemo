@@ -50,11 +50,6 @@ public class MemoController(
     public async Task<ActionResult<MemoDto>> CreateMemo(
         [FromBody] CreateMemoDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = _authService.GetUserId(User);
         var memo = await _memoService.CreateMemoAsync(userId, dto);
 
@@ -68,11 +63,6 @@ public class MemoController(
     public async Task<ActionResult<MemoDto>> UpdateMemo(
         Guid id, [FromBody] CreateMemoDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = _authService.GetUserId(User);
         var memo = await _memoService.UpdateMemoAsync(id, userId, dto);
 

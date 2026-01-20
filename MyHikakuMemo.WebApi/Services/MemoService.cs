@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MyHikakuMemo.WebApi.Controllers.Dtos;
 using MyHikakuMemo.WebApi.Data;
 using MyHikakuMemo.WebApi.Data.Entities;
@@ -37,7 +38,9 @@ public class MemoService(ApplicationDbContext context) : IMemoService
 
     public async Task<MemoDto?> GetMemoAsync(Guid id, string userId)
     {
-        var memo = await _context.Memos.FindAsync(id);
+        var memo = await _context.Memos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
 
         if (memo == null || memo.UserId != userId)
         {
@@ -49,17 +52,19 @@ public class MemoService(ApplicationDbContext context) : IMemoService
 
     public async Task<List<MemoDto>> GetMemosAsync(string userId)
     {
-        var memos = _context.Memos
+        var memos = await _context.Memos
+            .AsNoTracking()
             .Where(m => m.UserId == userId)
             .OrderByDescending(m => m.CreatedAt)
-            .ToList();
+            .ToListAsync();
 
-        return await Task.FromResult(memos.Select(MapToDto).ToList());
+        return [.. memos.Select(MapToDto)];
     }
 
     public async Task<MemoDto?> UpdateMemoAsync(Guid id, string userId, CreateMemoDto dto)
     {
-        var memo = await _context.Memos.FindAsync(id);
+        var memo = await _context.Memos
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
 
         if (memo == null || memo.UserId != userId)
         {
@@ -70,7 +75,6 @@ public class MemoService(ApplicationDbContext context) : IMemoService
         memo.Content = dto.Content;
         memo.UpdatedAt = DateTime.UtcNow;
 
-        _context.Memos.Update(memo);
         await _context.SaveChangesAsync();
 
         return MapToDto(memo);
@@ -78,7 +82,8 @@ public class MemoService(ApplicationDbContext context) : IMemoService
 
     public async Task<bool> DeleteMemoAsync(Guid id, string userId)
     {
-        var memo = await _context.Memos.FindAsync(id);
+        var memo = await _context.Memos
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
 
         if (memo == null || memo.UserId != userId)
         {
