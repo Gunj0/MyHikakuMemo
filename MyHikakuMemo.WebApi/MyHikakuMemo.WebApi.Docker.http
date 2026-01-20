@@ -1,4 +1,4 @@
-@HostAddress = https://localhost:7078
+@HostAddress = https://localhost:8080
 
 ### メモ一覧取得
 GET {{HostAddress}}/memo
